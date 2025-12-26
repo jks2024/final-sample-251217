@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import kh.mes.finalsample251217.entity.*;
 import kh.mes.finalsample251217.exception.CustomException;
 import kh.mes.finalsample251217.repository.*;
+import kh.mes.finalsample251217.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ public class ProductionService {
     private final ProductionRepository logRepo;
     private final MaterialRepository matRepo;
     private final BomRepository bomRepo;
+    private final MemberRepository memberRepository;
 
     // [1] 자재 입고
     @Transactional
@@ -64,6 +66,16 @@ public class ProductionService {
     // 2. 생산 실적 보고 (MES의 핵심: 실적기록 + 자재차감 + 수량증가)
     @Transactional
     public void reportProduction(Long orderId, String machineId, String result, String defectCode) {
+        String operatorName;
+        try {
+            // 1. SecurityContext에서 현재 로그인한 작업자 ID 추출
+            Long currentMemberId = SecurityUtil.getCurrentMemberId();
+            Member operator = memberRepository.findById(currentMemberId).orElseThrow();
+            operatorName = operator.getName();
+        } catch (Exception e) {
+            operatorName = "TEST_USER";
+        }
+
         WorkOrder order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("작업 지시를 찾을 수 없습니다. ID: " + orderId));
 
